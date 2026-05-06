@@ -36,7 +36,7 @@ const port = Number(process.env.PORT || 5000);
 
 connectDb()
   .then(() => {
-    app.listen(port, () => {
+    app.listen(port, "0.0.0.0", () => {
       // eslint-disable-next-line no-console
       console.log(`API listening on port ${port}`);
     });
