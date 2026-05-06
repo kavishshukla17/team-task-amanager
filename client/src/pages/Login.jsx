@@ -39,12 +39,16 @@ export default function Login() {
         ) : null}
 
         <label className="block text-sm text-black/80">
-          Email
+          Email (or <span className="font-medium">admin</span>)
           <input
             className="mt-1 w-full rounded-md border border-black/15 bg-white px-3 py-2 outline-none hover:border-black/30"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            type="email"
+            type="text"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="you@example.com or admin"
             required
           />
         </label>
