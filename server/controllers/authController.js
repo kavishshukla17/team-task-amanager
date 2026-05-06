@@ -4,6 +4,32 @@ const { validationResult } = require("express-validator");
 
 const User = require("../models/User");
 
+function demoAdminEnabled() {
+  // Disabled by default in production; opt-in via env when you really want it.
+  const flag = (process.env.DEMO_ADMIN_LOGIN || "").toLowerCase();
+  if (process.env.NODE_ENV === "production") return flag === "true";
+  return flag !== "false"; // default on for local/dev unless explicitly disabled
+}
+
+async function getOrCreateDemoAdmin() {
+  const demoEmail = process.env.DEMO_ADMIN_EMAIL || "admin@local";
+  const demoName = process.env.DEMO_ADMIN_NAME || "Admin";
+  const demoPassword = process.env.DEMO_ADMIN_PASSWORD || "admin";
+
+  let user = await User.findOne({ email: demoEmail });
+  if (!user) {
+    const passwordHash = await bcrypt.hash(demoPassword, 10);
+    user = await User.create({
+      name: demoName,
+      email: demoEmail,
+      passwordHash,
+      role: "Admin",
+    });
+  }
+
+  return { user, demoPassword, demoEmail };
+}
+
 function signToken(user) {
   if (!process.env.JWT_SECRET) {
     const err = new Error("JWT_SECRET is required");
@@ -45,7 +71,21 @@ async function login(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const { email, password } = req.body;
+  const rawEmail = String(req.body.email || "").trim();
+  const password = String(req.body.password || "");
+
+  // Demo shortcut: email "admin" + password "admin"
+  if (demoAdminEnabled() && rawEmail.toLowerCase() === "admin") {
+    const { user, demoPassword } = await getOrCreateDemoAdmin();
+    if (password !== demoPassword) return res.status(401).json({ message: "Invalid credentials" });
+    const token = signToken(user);
+    return res.json({
+      token,
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+    });
+  }
+
+  const email = rawEmail.toLowerCase();
 
   const user = await User.findOne({ email });
   if (!user) return res.status(401).json({ message: "Invalid credentials" });

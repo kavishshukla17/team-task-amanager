@@ -19,7 +19,10 @@ router.post(
 
 router.post(
   "/login",
-  [body("email").isEmail().normalizeEmail(), body("password").isString().isLength({ min: 1 })],
+  [
+    body("email").isString().trim().isLength({ min: 1, max: 120 }),
+    body("password").isString().isLength({ min: 1, max: 200 }),
+  ],
   login
 );
 
